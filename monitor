@@ -1,0 +1,7 @@
+while true; do
+    echo -en "Press Ctrl-C to exit \t\t:\n "
+    ./mcquaymon2 $1 $2 2> /dev/null
+    sleep $3
+    clear
+   
+done

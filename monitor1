@@ -1,0 +1,52 @@
+#!/usr/bin/perl
+
+use warnings;
+
+#do bacnet read epics file for mcquay
+@names = `bacepics -v $ARGV[0]`;
+
+
+foreach(@names){
+     if( $_ =~ /object-name/){
+          push @mcquay, $_;
+     }
+}
+
+foreach(@names){
+     if( $_ =~ /object-type/ ){
+          push @description, $_;
+     }
+
+}
+
+foreach( @names ){
+     if( $_ =~ /present-value/ ){
+          $temp = $_;
+          push @pv, $temp;
+     }
+}
+
+
+print $mcquay[0]."\n";
+
+foreach(1..($ARGV[1] + 1)){
+     print $mcquay[$_];
+}
+
+print "\n";
+
+foreach(0..$ARGV[1]){
+     print $description[$_];
+}
+
+print "\n";
+
+foreach(0..$ARGV[1]){
+     print $pv[$_];
+}
+
+print "\n";
+
+
+
+

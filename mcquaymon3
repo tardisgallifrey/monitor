@@ -1,0 +1,95 @@
+#!/usr/bin/perl
+
+use v5.10;
+use warnings;
+
+#Range variable for setting how many points to 
+#print
+my @range = 0..$ARGV[1];
+
+#do bacnet read epics file for mcquay
+#Stick all lines of the output into 
+#@names array list
+@names = `bacepics -v $ARGV[0]`;
+
+
+#Read into @names list line from EPICS
+#that match object-name. Gets all
+#point names
+foreach(@names){
+     if( $_ =~ /object-name/){
+          push @mcquay, substr $_, index($_,'"');
+     }
+}
+
+foreach( @mcquay ){
+     while( $_ =~ /\"/g ){
+          $_ =~ s/\"//;
+     }
+
+}
+
+foreach( @mcquay ){
+     while( $_ =~ /[\000-\037]/g ){
+        $_ =~ s/[\000-\037]//;
+     }
+
+}
+
+foreach(@names){
+     if( $_ =~ /description/ ){
+          push @description, substr $_, index($_,'"');
+     }
+
+}
+
+foreach( @description ){
+     while( $_ =~ /\"/g ){
+          $_ =~ s/\"//;
+     }
+
+}
+
+foreach( @description ){
+     while( $_ =~ /[\000-\037]/g ){
+          $_ =~ s/[\000-\037]//;
+     }
+}
+
+foreach( @names ){
+     if( $_ =~ /present-value/ ){
+          $temp = $_;
+          push @pv, $temp;
+     }
+}
+
+foreach( @pv ){
+     @temp = split /: /, $_;
+     $_ = $temp[1];
+   
+}
+
+foreach( @pv ){
+     while( $_ =~ /[\000-\037]/g ){
+          $_ =~ s/[\000-\037]//;
+     }
+
+}
+
+
+print $mcquay[0]."\n";
+
+print "\n";
+
+foreach(@range){
+     
+     $spaces = (length $description[$_]) + (length $pv[$_]);
+     print $description[$_];
+     print ' ' x (80 - $spaces);
+     print substr($pv[$_],0,6)."\n";
+}
+
+print "\n";
+print "\n";
+
+

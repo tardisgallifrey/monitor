@@ -1,0 +1,8 @@
+while true; do
+    echo -en "Press Ctrl-C to exit \t\t:\n "
+    ./monitor1 $1 $2 2> error.log
+    head -3 error.log
+    sleep $3
+    clear
+   
+done

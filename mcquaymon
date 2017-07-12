@@ -1,0 +1,204 @@
+#!/usr/bin/perl
+
+use 5.010;
+use warnings;
+
+
+#Exit with USAGE message if not enough command line arguments are present
+print "Usage: mcquaymon addr\nWhere addr = address of BACnet device.\n" and exit if scalar(@ARGV) < 1;
+
+# declare arrays for epics read,
+# mcquay list of object-names,
+# point descriptions in mcquay
+# and present values of points in mcquay
+my (@names, @mcquay, @description, @pv);
+
+
+# sub-routine to read epics for address 
+# listed on command line and returns
+# an array of all the lines read
+sub readepics{
+
+#declare a local variable and get first
+#passed scalar variable from @_
+     my $refvar = shift;
+
+#use referenced variable to 
+#read the EPICS file from BACnet device
+#return all lines as list array
+     #do bacnet read epics file for mcquay
+     return `bacepics -v $$refvar`;
+
+}
+
+#Function to read and parse object names
+#from EPICS read function
+sub readobjnames{
+
+#pass array into sub only by reference
+#@{$_[0]} dereferences first argument passed as
+#an array
+     my @original = @{$_[0]};
+
+#declare objnamelst array as local to function
+     my @objnamelst = ();
+
+#if any line of @original contains object-name
+#strip off " and stuff results into objnamelst
+     foreach(@original){
+        if( $_ =~ /object-name/){
+          push @objnamelst, substr $_, index($_,'"');
+        }
+     }
+
+#in two passes of objnamelst:
+#remove everything not part of the object name
+#and any non-printable characters, including newlines
+     for my $i ( 0..$#objnamelst ){
+        while( $objnamelst[$i] =~ /\"/g ){
+          $objnamelst[$i] =~ s/\"//;
+        }
+     }
+        
+     $i=0;  #resets index to objnamelst
+        
+     for $i ( 0..$#objnamelst ){
+        while( $objnamelst[$i] =~ /[\000-\037]/g ){
+          $objnamelst[$i] =~ s/[\000-\037]//;
+        }
+     }
+
+#return the object name list to the caller
+     return @objnamelst;
+
+}
+
+#Function to read and parse descriptions
+#from EPICS read function
+sub readdescript {
+
+#pass array into sub only by reference
+#@{$_[0]} dereferences first argument passed as
+#an array
+     my @original = @{$_[0]};
+
+#declare descriptlst array as local to function
+     my @descriptlst = ();
+
+#if any line of @original contains object-name
+#strip off " and stuff results into objnamelst
+     foreach(@original){
+          if( $_ =~ /description/ ){
+               push @descriptlst, substr $_, index($_,'"');
+          }
+     }
+
+#in two passes of descriptlst:
+#remove everything not part of the description
+#and any non-printable characters, including newlines
+     for my $i ( 0..$#descriptlst ){
+        while( $descriptlst[$i] =~ /\"/g ){
+          $descriptlst[$i] =~ s/\"//;
+        }
+     }
+
+     $i=0;  #resets index to descriptlst
+
+     for $i ( 0..$#descriptlst ){
+        while( $descriptlst[$i] =~ /[\000-\037]/g ){
+           $descriptlst[$i] =~ s/[\000-\037]//;
+        }
+     }
+
+     
+#return the object name list to the caller
+     return @descriptlst;
+
+}
+
+
+#Function to read and parse present value
+#from EPICS read function
+sub readpv {
+
+#pass array into sub only by reference
+#@{$_[0]} dereferences first argument passed as
+#an array
+     my @original = @{$_[0]};
+
+#declare pvlst array as local to function
+     my @pvlst = ();
+
+#if any line of @original contains object-name
+#strip off " and stuff results into objnamelst
+     foreach(@original){
+          if( $_ =~ /present-value/ ){
+             $temp = $_;
+             push @pvlst, $temp;
+          }
+     }
+
+#in two passes of pvlst:
+#remove everything not part of the present value
+#and any non-printable characters, including newlines
+     for my $i ( 0..$#pvlst ){
+        @temp = split /: /, $pvlst[$i];
+        $pvlst[$i] = $temp[1];
+     }
+
+     $i = 0;
+
+     for $i ( 0..$#pvlst ){
+        while( $pvlst[$i] =~ /[\000-\037]/g ){
+               $pvlst[$i] =~ s/[\000-\037]//;
+           }
+     }
+
+#return the present value list to the caller
+     return @pvlst;
+
+}
+
+
+#BEGINNING OF ACTUAL PROGRAM
+#___________________________
+
+#read EPICS file from device
+#stuff all lines into @names
+@names = readepics(\$ARGV[0]);
+
+
+#pass @names to the object name function by reference "\"
+@mcquay = readobjnames(\@names);
+
+#pass @names to the description function by reference "\"
+@description = readdescript(\@names);
+
+#pass @names to the present value function by reference "\"
+@pv = readpv(\@names);
+
+
+foreach(0..2){
+     print $mcquay[$_];
+     print "\n";
+}
+
+print "\n";
+
+foreach(0..2){
+     print $description[$_];
+     print "\n";
+}
+
+print "\n";
+
+foreach(0..2){
+     print $pv[$_];
+     print "\n";
+}
+
+print "\n";
+
+
+
+

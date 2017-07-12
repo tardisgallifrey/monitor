@@ -1,0 +1,189 @@
+#!/usr/bin/perl
+
+use 5.010;
+use warnings;
+use Term::ReadKey;
+ReadMode 4;
+
+#Exit with USAGE message if not enough command line arguments are present
+print "Usage: mcquaymon addr range seconds\nWhere addr = address of BACnet device,\n
+range = upper limit of subpoints printed,\nand seconds = delay between reads.\n" and exit if scalar(@ARGV) < 3;
+
+# declare arrays for epics read,
+# mcquay list of object-names,
+# point descriptions in mcquay
+# and present values of points in mcquay
+my (@names, @mcquay, @description, @pv);
+
+#declare key variable for stopping repeat of program
+#declare addr-ess variable to get first command line
+#argument as ARGV's aren't read correctly in this usage
+my $key;
+$addr = $ARGV[0];
+
+#Range variable for setting how many points to 
+#print
+my @range = 0..$ARGV[1];
+
+# sub-routine to read epics for address 
+# listed on command line and returns
+# an array of all the lines read
+sub readepics{
+
+#declare a local variable and get first
+#passed scalar variable from @_
+     my $refvar = shift;
+
+#use referenced variable to 
+#read the EPICS file from BACnet device
+#return all lines as array
+## $$ is to read by reference
+
+     #do bacnet read epics file for mcquay
+     return `bacepics -v $$refvar`;
+
+}
+
+
+#Function to read and parse object names
+#from EPICS read function
+sub readobjnames{
+
+#pass array into sub only by reference
+#@{$_[0]} dereferences first argument passed as
+#an array
+     my @original = @{$_[0]};
+
+#declare objnamelst array as local to function
+     my @objnamelst = ();
+
+#if any line of @original contains object-name
+#strip off " and stuff results into objnamelst
+     foreach(@original){
+        if( $_ =~ /object-name/){
+          push @objnamelst, substr $_, index($_,'"');
+        }
+     }
+
+#in two passes of objnamelst:
+#remove everything not part of the object name
+#and any non-printable characters, including newlines
+     for my $i ( 0..$#objnamelst ){
+        while( $objnamelst[$i] =~ /\"/g ){
+          $objnamelst[$i] =~ s/\"//;
+        }
+     $i=0;  #resets index to objnamelst
+     for $i ( 0..$#objnamelst ){
+        while( $objnamelst[$i] =~ /[\000-\037]/g ){
+           $objnamelst[$i] =~ s/[\000-\037]//;
+        }
+     }
+
+     }
+#return the object name list to the caller
+     return @objnamelst;
+
+}
+
+#BEGINNING OF ACTUAL PROGRAM
+#___________________________
+
+while(not defined ($key = ReadKey(-1))) {
+
+   
+#read EPICS file from device
+#stuff all lines into @names
+# \ is for pass value by reference
+     @names = readepics(\$addr);
+
+
+#Check to see if the EPICS read passed
+#TRUE if @names list is not empty
+#If so, then run read object names function
+     if(@names){
+     
+          #pass @names to the object name function by reference "\"
+          @mcquay = &readobjnames(\@names);
+     } else {
+
+          print "EPICS read of $addr failed.\nWill Exit now.\n";
+          exit;
+     }
+
+     foreach(@names){
+          if( $_ =~ /description/ ){
+               push @description, substr $_, index($_,'"');
+          }
+
+     }
+
+     foreach( @description ){
+          while( $_ =~ /\"/g ){
+               $_ =~ s/\"//;
+          }
+
+     }
+
+     foreach( @description ){
+          while( $_ =~ /[\000-\037]/g ){
+               $_ =~ s/[\000-\037]//;
+          }
+     }
+
+     foreach( @names ){
+          if( $_ =~ /present-value/ ){
+               $temp = $_;
+               push @pv, $temp;
+          }
+     }
+
+     
+     foreach( @pv ){
+          @temp = split /: /, $_;
+          $_ = $temp[1];
+   
+     }
+
+     foreach( @pv ){
+          while( $_ =~ /[\000-\037]/g ){
+               $_ =~ s/[\000-\037]//;
+          }
+
+     }
+
+
+     print $mcquay[0]."\n";
+
+     print "\n";
+
+    foreach(@range){
+     
+     $spaces = (length $description[$_]) + (length $pv[$_]);
+     print $description[$_];
+     print ' ' x (80 - $spaces);
+     print substr($pv[$_],0,6)."\n";
+     }
+
+     print "\n";
+     print "\n";
+     sleep $ARGV[2];
+     print "Starting over\n";
+
+# I do not know why, but one must clear each 
+# of the arrays used before the while resets
+# to the beginning
+
+     @names = ();
+     @mcquay = ();
+     @description = ();
+     @pv = ();
+     sleep 3;
+
+}
+
+#Set Keyboard mode back to original
+ReadMode 0;
+print "Exiting monitor.\n";
+
+
+
