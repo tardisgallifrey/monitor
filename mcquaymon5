@@ -23,7 +23,29 @@ $addr = $ARGV[0];
 
 #Range variable for setting how many points to 
 #print in log order
-my @range = ( 1,0,3,2,23,18,21,20,13,14,16,10,15,99,25,24 );
+my @range = ( 1,0,3,2,23,18,21,20,13,14,16,10,15,-1,-2,25,24 );
+
+#R134a P/T chart hash needed for superheat value
+my %ptchart = ( 28.1 => 32,
+                28.3 => 33,
+                29.5 => 34,
+                30.4 => 35,
+                31.3 => 36,
+                32.0 => 37,
+                33.1 => 38,
+                34.0 => 39,
+                35.0 => 40,
+                36.0 => 41,
+                37.0 => 42,
+                38.0 => 43,
+                39.0 => 44,
+                40.0 => 45,
+                41.1 => 46,
+                42.0 => 47,
+                43.2 => 48,
+                44.0 => 49,
+                45.4 => 50,
+            );
 
 # sub-routine to read epics for address 
 # listed on command line and returns
@@ -179,7 +201,24 @@ while(not defined ($key = ReadKey(-1))) {
             next;
 
 
-         }elsif ( $_ == 99 ){
+         }elsif( $_ == -1 ){ 
+
+            #calculate and print out Refrigerant Superheat
+            $temp = $pv[12];
+            $newdescription = "Refrigerant Superheat";
+            foreach my $p (sort {$a<=>$b} keys %ptchart){
+                if( $p >= $temp ){
+                   $temp = $ptchart{$p} - $pv[14] + 0.000001;
+                   next;
+                } 
+            
+            }
+            $spaces = ( length $newdescription ) + ( length $temp );
+            print $newdescription;
+            print ' ' x ( 80 - $spaces);
+            print substr( $temp, 0 , 6 )."\n";
+
+         }elsif( $_ == -2 ){
 
             #print out Refrigerant SubCooling
             $temp= ( $pv[16] - $pv[10] ) + 0.0000001;
